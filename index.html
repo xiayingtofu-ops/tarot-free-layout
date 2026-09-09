@@ -47,14 +47,14 @@
     </div>
     <div class="presets">
       <select id="preset" aria-label="选择基础牌阵">
-        <option value="single">单张牌阵</option>
-        <option value="timeline" selected>三张牌阵 · 时间线</option>
-        <option value="action">三张牌阵 · 问题行动结果</option>
-        <option value="loveTriangle">感情三角</option>
-        <option value="cross5">五张小十字</option>
-        <option value="relationship5">关系五张阵</option>
-        <option value="celtic10">凯尔特十字</option>
-        <option value="decision7">七张决策阵</option>
+        <option value="single">单张牌阵 · 1张</option>
+        <option value="timeline" selected>三张牌阵 · 时间线 · 3张</option>
+        <option value="action">问题—行动—结果 · 3张</option>
+        <option value="loveTriangle">感情三角 · 3张</option>
+        <option value="cross5">五张小十字 · 5张</option>
+        <option value="relationship5">关系五张阵 · 5张</option>
+        <option value="celtic10">凯尔特十字 · 10张</option>
+        <option value="decision7">七张决策阵 · 7张</option>
       </select>
       <button id="applyPreset">套用牌阵</button>
     </div>
@@ -151,6 +151,7 @@ document.querySelector('#add').onclick=()=>addSlot();
 document.querySelector('#draw').onclick=drawCard;
 document.querySelector('#copy').onclick=copyResult;
 document.querySelector('#applyPreset').onclick=()=>applyPreset(document.querySelector('#preset').value);
+document.querySelector('#preset').onchange=e=>applyPreset(e.target.value);
 document.querySelector('#reset').onclick=()=>{ if(confirm('清空当前牌阵和抽牌结果？')){slots=[];nextId=1;render();say('已重新开始');} };
 board.addEventListener('dblclick',e=>{ if(e.target===board){ const r=board.getBoundingClientRect(); addSlot(e.clientX-r.left-SLOT_W/2,e.clientY-r.top-SLOT_H/2); } });
 window.addEventListener('resize',()=>{ slots.forEach(s=>{s.x=clamp(s.x,0,Math.floor((board.clientWidth-SLOT_W)/GRID_X)*GRID_X);s.y=clamp(s.y,0,Math.floor((board.clientHeight-SLOT_H)/GRID_Y)*GRID_Y)});render(); });
