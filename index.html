@@ -53,10 +53,11 @@ const ranks=['一','二','三','四','五','六','七','八','九','十','侍从
 const deck=[...major,...suits.flatMap(s=>ranks.map(r=>s+r))];
 const board=document.querySelector('#board'), statusEl=document.querySelector('#status');
 let slots=[], nextId=1, drag=null;
-const SLOT_W=120, SLOT_H=64;
+const SLOT_W=120, SLOT_H=64, GRID=16;
 
 function say(text){ statusEl.textContent=text; }
 function clamp(n,min,max){ return Math.max(min,Math.min(max,n)); }
+function snap(n){ return Math.round(n/GRID)*GRID; }
 function addSlot(x,y){
   const id=nextId++, w=board.clientWidth, h=board.clientHeight;
   const slot={id,x:x ?? 24+(slots.length%7)*136,y:y ?? 24+Math.floor(slots.length/7)*82,card:null};
@@ -84,11 +85,11 @@ function startDrag(e){
 }
 function moveDrag(e){
   if(!drag)return; const r=board.getBoundingClientRect();
-  drag.slot.x=clamp(e.clientX-r.left-drag.dx,0,r.width-drag.el.offsetWidth);
-  drag.slot.y=clamp(e.clientY-r.top-drag.dy,0,r.height-drag.el.offsetHeight);
+  drag.slot.x=clamp(snap(e.clientX-r.left-drag.dx),0,r.width-drag.el.offsetWidth);
+  drag.slot.y=clamp(snap(e.clientY-r.top-drag.dy),0,r.height-drag.el.offsetHeight);
   drag.el.style.left=drag.slot.x+'px'; drag.el.style.top=drag.slot.y+'px';
 }
-function endDrag(){ if(!drag)return; drag.el.classList.remove('dragging'); drag.el.removeEventListener('pointermove',moveDrag); drag=null; say('牌阵位置已更新'); }
+function endDrag(){ if(!drag)return; drag.el.classList.remove('dragging'); drag.el.removeEventListener('pointermove',moveDrag); drag=null; say('牌位已吸附到网格'); }
 function drawCard(){
   if(!slots.length){ addSlot(); return; }
   const target=slots.find(s=>!s.card); if(!target){ say('所有牌位都已抽完，可添加牌位或重新开始'); return; }
