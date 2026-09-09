@@ -100,7 +100,7 @@ function drawCard(){
 async function copyResult(){
   if(!slots.length){ say('请先添加牌位'); return; }
   const ordered=[...slots].sort((a,b)=>a.y-b.y || a.x-b.x);
-  const lines=['自由牌阵抽牌结果',`时间：${new Date().toLocaleString('zh-CN')}`,'',...ordered.map((s,i)=>`${i+1}. ${s.card ?? '待抽'}（位置：${Math.round(s.x)}, ${Math.round(s.y)}）`)];
+  const lines=['提示词：先根据坐标分析这个牌阵怎么解读，再开始分析牌意。','','自由牌阵抽牌结果',`时间：${new Date().toLocaleString('zh-CN')}`,'',...ordered.map((s,i)=>`${i+1}. ${s.card ?? '待抽'}（位置：${Math.round(s.x)}, ${Math.round(s.y)}）`)];
   try{ await navigator.clipboard.writeText(lines.join('\n')); say('牌阵信息和抽牌结果已复制'); }
   catch{ const t=document.createElement('textarea'); t.value=lines.join('\n'); document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); say('牌阵信息和抽牌结果已复制'); }
 }
