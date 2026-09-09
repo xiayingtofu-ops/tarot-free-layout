@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>自由牌阵 · 78 张韦特塔罗</title>
+  <style>
+    :root { color-scheme: light; --ink:#241f1a; --paper:#f5f0e6; --line:#74695b; --accent:#7d302b; }
+    * { box-sizing:border-box; }
+    html, body { margin:0; min-height:100%; background:var(--paper); color:var(--ink); font-family:"Noto Serif SC","Songti SC",serif; }
+    body { padding:clamp(18px,4vw,46px); }
+    main { width:min(1080px,100%); margin:auto; }
+    header { display:flex; gap:20px; align-items:end; justify-content:space-between; flex-wrap:wrap; border-bottom:1px solid var(--ink); padding-bottom:18px; }
+    h1 { margin:0; font-size:clamp(26px,5vw,48px); font-weight:500; letter-spacing:.12em; }
+    p { margin:.55em 0 0; color:#5f5549; }
+    .actions { display:flex; flex-wrap:wrap; gap:9px; }
+    button { appearance:none; border:1px solid var(--ink); background:transparent; color:inherit; padding:10px 16px; font:inherit; cursor:pointer; }
+    button:hover, button:focus-visible { background:var(--ink); color:var(--paper); outline:none; }
+    button.primary { background:var(--accent); border-color:var(--accent); color:#fffaf0; }
+    #board { position:relative; height:clamp(480px,66vh,720px); margin-top:22px; border:1px solid var(--line); overflow:hidden; background-image:linear-gradient(rgba(36,31,26,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(36,31,26,.045) 1px,transparent 1px); background-size:28px 28px; touch-action:none; }
+    #board::before { content:"拖动虚线牌位，自由布置牌阵"; position:absolute; inset:50% auto auto 50%; transform:translate(-50%,-50%); width:90%; text-align:center; letter-spacing:.18em; color:rgba(36,31,26,.18); pointer-events:none; }
+    .slot { position:absolute; width:clamp(108px,15vw,146px); height:clamp(158px,22vw,214px); border:2px dashed var(--line); display:flex; align-items:center; justify-content:center; padding:14px; text-align:center; cursor:grab; user-select:none; touch-action:none; background:rgba(245,240,230,.9); transition:box-shadow .15s,border-color .15s; }
+    .slot.dragging { cursor:grabbing; border-color:var(--accent); box-shadow:0 12px 28px rgba(36,31,26,.18); z-index:10; }
+    .slot .number { position:absolute; top:7px; left:9px; font:12px/1 sans-serif; color:#756a5d; }
+    .slot .remove { position:absolute; top:4px; right:7px; border:0; padding:2px 4px; color:#756a5d; background:transparent; font:16px/1 sans-serif; }
+    .slot .remove:hover { color:var(--accent); background:transparent; }
+    .slot .card { line-height:1.7; letter-spacing:.08em; }
+    .slot.empty .card { color:#887c6e; font-size:14px; }
+    #status { min-height:1.5em; margin-top:12px; font-size:14px; }
+    footer { display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-top:18px; padding-top:14px; border-top:1px solid #b9ae9f; font-size:13px; color:#756a5d; }
+    @media (max-width:600px) { body{padding:16px} .actions{width:100%} .actions button{flex:1} #board{height:68vh} }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div><h1>自由牌阵</h1><p>拖动牌位 · 点击抽牌 · 结果不重复</p></div>
+    <div class="actions">
+      <button id="add">＋ 牌位</button>
+      <button id="draw" class="primary">抽牌</button>
+      <button id="copy">复制结果</button>
+      <button id="reset">重新开始</button>
+    </div>
+  </header>
+  <section id="board" aria-label="可自由拖动的牌阵区域"></section>
+  <p id="status" role="status" aria-live="polite"></p>
+  <footer><span>标准韦特塔罗 · 78 张</span><span>提示：双击空白处也可添加牌位</span></footer>
+</main>
+<script>
+const major=['愚人','魔术师','女祭司','女皇','皇帝','教皇','恋人','战车','力量','隐士','命运之轮','正义','倒吊人','死神','节制','恶魔','高塔','星星','月亮','太阳','审判','世界'];
+const suits=['权杖','圣杯','宝剑','星币'];
+const ranks=['一','二','三','四','五','六','七','八','九','十','侍从','骑士','王后','国王'];
+const deck=[...major,...suits.flatMap(s=>ranks.map(r=>s+r))];
+const board=document.querySelector('#board'), statusEl=document.querySelector('#status');
+let slots=[], nextId=1, drag=null;
+
+function say(text){ statusEl.textContent=text; }
+function clamp(n,min,max){ return Math.max(min,Math.min(max,n)); }
+function addSlot(x,y){
+  const id=nextId++, w=board.clientWidth, h=board.clientHeight;
+  const slot={id,x:x ?? 24+(slots.length%6)*125,y:y ?? 24+Math.floor(slots.length/6)*185,card:null};
+  slot.x=clamp(slot.x,0,Math.max(0,w-108)); slot.y=clamp(slot.y,0,Math.max(0,h-158));
+  slots.push(slot); render(); say(`已添加牌位 ${id}`);
+}
+function render(){
+  board.innerHTML='';
+  slots.forEach((slot,index)=>{
+    const el=document.createElement('div');
+    el.className='slot '+(slot.card?'filled':'empty'); el.dataset.id=slot.id;
+    el.style.left=slot.x+'px'; el.style.top=slot.y+'px';
+    el.innerHTML=`<span class="number">${index+1}</span><button class="remove" title="删除牌位" aria-label="删除牌位">×</button><span class="card">${slot.card ?? '待抽'}</span>`;
+    el.querySelector('.remove').addEventListener('click',e=>{e.stopPropagation(); slots=slots.filter(s=>s.id!==slot.id); render(); say('已删除牌位');});
+    el.addEventListener('pointerdown',startDrag);
+    board.appendChild(el);
+  });
+}
+function startDrag(e){
+  if(e.target.closest('button')) return;
+  const el=e.currentTarget, slot=slots.find(s=>s.id===Number(el.dataset.id));
+  drag={el,slot,dx:e.clientX-el.getBoundingClientRect().left,dy:e.clientY-el.getBoundingClientRect().top};
+  el.classList.add('dragging'); el.setPointerCapture(e.pointerId);
+  el.addEventListener('pointermove',moveDrag); el.addEventListener('pointerup',endDrag,{once:true}); el.addEventListener('pointercancel',endDrag,{once:true});
+}
+function moveDrag(e){
+  if(!drag)return; const r=board.getBoundingClientRect();
+  drag.slot.x=clamp(e.clientX-r.left-drag.dx,0,r.width-drag.el.offsetWidth);
+  drag.slot.y=clamp(e.clientY-r.top-drag.dy,0,r.height-drag.el.offsetHeight);
+  drag.el.style.left=drag.slot.x+'px'; drag.el.style.top=drag.slot.y+'px';
+}
+function endDrag(){ if(!drag)return; drag.el.classList.remove('dragging'); drag.el.removeEventListener('pointermove',moveDrag); drag=null; say('牌阵位置已更新'); }
+function drawCard(){
+  if(!slots.length){ addSlot(); return; }
+  const target=slots.find(s=>!s.card); if(!target){ say('所有牌位都已抽完，可添加牌位或重新开始'); return; }
+  const used=new Set(slots.map(s=>s.card).filter(Boolean)), available=deck.filter(c=>!used.has(c));
+  if(!available.length){ say('78 张牌已全部抽完'); return; }
+  target.card=available[Math.floor(Math.random()*available.length)]; render(); say(`牌位 ${slots.indexOf(target)+1}：${target.card}`);
+}
+async function copyResult(){
+  if(!slots.length){ say('请先添加牌位'); return; }
+  const ordered=[...slots].sort((a,b)=>a.y-b.y || a.x-b.x);
+  const lines=['自由牌阵抽牌结果',`时间：${new Date().toLocaleString('zh-CN')}`,'',...ordered.map((s,i)=>`${i+1}. ${s.card ?? '待抽'}（位置：${Math.round(s.x)}, ${Math.round(s.y)}）`)];
+  try{ await navigator.clipboard.writeText(lines.join('\n')); say('牌阵信息和抽牌结果已复制'); }
+  catch{ const t=document.createElement('textarea'); t.value=lines.join('\n'); document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); say('牌阵信息和抽牌结果已复制'); }
+}
+document.querySelector('#add').onclick=()=>addSlot();
+document.querySelector('#draw').onclick=drawCard;
+document.querySelector('#copy').onclick=copyResult;
+document.querySelector('#reset').onclick=()=>{ if(confirm('清空当前牌阵和抽牌结果？')){slots=[];nextId=1;render();say('已重新开始');} };
+board.addEventListener('dblclick',e=>{ if(e.target===board){ const r=board.getBoundingClientRect(); addSlot(e.clientX-r.left-54,e.clientY-r.top-79); } });
+window.addEventListener('resize',()=>{ slots.forEach(s=>{s.x=clamp(s.x,0,board.clientWidth-108);s.y=clamp(s.y,0,board.clientHeight-158)});render(); });
+addSlot(40,45); addSlot(210,160); addSlot(380,45); say('牌阵已就绪，拖动牌位开始布置');
+</script>
+</body>
+</html>
