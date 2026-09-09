@@ -92,12 +92,17 @@ function moveDrag(e){
 function endDrag(){ if(!drag)return; drag.el.classList.remove('dragging'); drag.el.removeEventListener('pointermove',moveDrag); drag=null; say('牌位已吸附到网格'); }
 function drawCard(){
   if(!slots.length){ addSlot(); return; }
-  const target=slots.find(s=>!s.card); if(!target){ say('所有牌位都已抽完，可添加牌位或重新开始'); return; }
+  const targets=slots.filter(s=>!s.card); if(!targets.length){ say('所有牌位都已抽完，可添加牌位或重新开始'); return; }
   const used=new Set(slots.map(s=>s.card?.split(' · ')[0]).filter(Boolean)), available=deck.filter(c=>!used.has(c));
   if(!available.length){ say('78 张牌已全部抽完'); return; }
-  const name=available[Math.floor(Math.random()*available.length)];
-  const orientation=Math.random()<.5?'正位':'逆位';
-  target.card=`${name} · ${orientation}`; render(); say(`牌位 ${slots.indexOf(target)+1}：${target.card}`);
+  let count=0;
+  targets.forEach(target=>{
+    if(!available.length)return;
+    const name=available.splice(Math.floor(Math.random()*available.length),1)[0];
+    const orientation=Math.random()<.5?'正位':'逆位';
+    target.card=`${name} · ${orientation}`; count++;
+  });
+  render(); say(`已一次抽出 ${count} 张牌`);
 }
 async function copyResult(){
   if(!slots.length){ say('请先添加牌位'); return; }
