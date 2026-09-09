@@ -17,7 +17,7 @@
     button { appearance:none; border:2px solid var(--ink); background:#050505; color:inherit; padding:8px 13px; font:700 13px/1.2 inherit; cursor:pointer; border-radius:0; box-shadow:3px 3px 0 #555; }
     button:hover, button:focus-visible { background:var(--ink); color:var(--paper); outline:none; box-shadow:none; transform:translate(2px,2px); }
     button.primary { background:var(--ink); border-color:var(--ink); color:var(--paper); }
-    #board { position:relative; height:clamp(460px,68vh,700px); margin-top:20px; border:2px solid var(--ink); overflow:hidden; background-image:linear-gradient(#181818 1px,transparent 1px),linear-gradient(90deg,#181818 1px,transparent 1px); background-size:32px 32px; touch-action:none; box-shadow:5px 5px 0 #333; }
+    #board { position:relative; height:clamp(460px,68vh,700px); margin-top:20px; border:2px solid var(--ink); overflow:hidden; background-image:linear-gradient(#181818 1px,transparent 1px),linear-gradient(90deg,#181818 1px,transparent 1px); background-size:120px 64px; touch-action:none; box-shadow:5px 5px 0 #333; }
     #board::before { content:"[ DRAG TO ARRANGE ]"; position:absolute; inset:50% auto auto 50%; transform:translate(-50%,-50%); width:90%; text-align:center; letter-spacing:.12em; color:#292929; pointer-events:none; }
     .slot { position:absolute; width:120px; height:64px; border:2px dashed var(--line); display:flex; align-items:center; justify-content:center; padding:10px 20px 8px 10px; text-align:center; cursor:grab; user-select:none; touch-action:none; background:#050505; transition:none; }
     .slot.dragging { cursor:grabbing; border-style:solid; border-color:var(--accent); box-shadow:4px 4px 0 #555; z-index:10; }
@@ -53,15 +53,16 @@ const ranks=['一','二','三','四','五','六','七','八','九','十','侍从
 const deck=[...major,...suits.flatMap(s=>ranks.map(r=>s+r))];
 const board=document.querySelector('#board'), statusEl=document.querySelector('#status');
 let slots=[], nextId=1, drag=null;
-const SLOT_W=120, SLOT_H=64, GRID=32;
+const SLOT_W=120, SLOT_H=64, GRID_X=SLOT_W, GRID_Y=SLOT_H;
 
 function say(text){ statusEl.textContent=text; }
 function clamp(n,min,max){ return Math.max(min,Math.min(max,n)); }
-function snap(n){ return Math.round(n/GRID)*GRID; }
+function snap(n,grid){ return Math.round(n/grid)*grid; }
 function addSlot(x,y){
   const id=nextId++, w=board.clientWidth, h=board.clientHeight;
-  const slot={id,x:x ?? 24+(slots.length%7)*136,y:y ?? 24+Math.floor(slots.length/7)*82,card:null};
-  slot.x=clamp(slot.x,0,Math.max(0,w-SLOT_W)); slot.y=clamp(slot.y,0,Math.max(0,h-SLOT_H));
+  const slot={id,x:x ?? (slots.length%7)*GRID_X,y:y ?? Math.floor(slots.length/7)*GRID_Y,card:null};
+  slot.x=clamp(snap(slot.x,GRID_X),0,Math.floor(Math.max(0,w-SLOT_W)/GRID_X)*GRID_X);
+  slot.y=clamp(snap(slot.y,GRID_Y),0,Math.floor(Math.max(0,h-SLOT_H)/GRID_Y)*GRID_Y);
   slots.push(slot); render(); say(`已添加牌位 ${id}`);
 }
 function render(){
@@ -85,8 +86,8 @@ function startDrag(e){
 }
 function moveDrag(e){
   if(!drag)return; const r=board.getBoundingClientRect();
-  drag.slot.x=clamp(snap(e.clientX-r.left-drag.dx),0,r.width-drag.el.offsetWidth);
-  drag.slot.y=clamp(snap(e.clientY-r.top-drag.dy),0,r.height-drag.el.offsetHeight);
+  drag.slot.x=clamp(snap(e.clientX-r.left-drag.dx,GRID_X),0,Math.floor((r.width-drag.el.offsetWidth)/GRID_X)*GRID_X);
+  drag.slot.y=clamp(snap(e.clientY-r.top-drag.dy,GRID_Y),0,Math.floor((r.height-drag.el.offsetHeight)/GRID_Y)*GRID_Y);
   drag.el.style.left=drag.slot.x+'px'; drag.el.style.top=drag.slot.y+'px';
 }
 function endDrag(){ if(!drag)return; drag.el.classList.remove('dragging'); drag.el.removeEventListener('pointermove',moveDrag); drag=null; say('牌位已吸附到网格'); }
@@ -116,8 +117,8 @@ document.querySelector('#draw').onclick=drawCard;
 document.querySelector('#copy').onclick=copyResult;
 document.querySelector('#reset').onclick=()=>{ if(confirm('清空当前牌阵和抽牌结果？')){slots=[];nextId=1;render();say('已重新开始');} };
 board.addEventListener('dblclick',e=>{ if(e.target===board){ const r=board.getBoundingClientRect(); addSlot(e.clientX-r.left-SLOT_W/2,e.clientY-r.top-SLOT_H/2); } });
-window.addEventListener('resize',()=>{ slots.forEach(s=>{s.x=clamp(s.x,0,board.clientWidth-SLOT_W);s.y=clamp(s.y,0,board.clientHeight-SLOT_H)});render(); });
-addSlot(40,45); addSlot(190,130); addSlot(340,45); say('牌阵已就绪，拖动牌位开始布置');
+window.addEventListener('resize',()=>{ slots.forEach(s=>{s.x=clamp(s.x,0,Math.floor((board.clientWidth-SLOT_W)/GRID_X)*GRID_X);s.y=clamp(s.y,0,Math.floor((board.clientHeight-SLOT_H)/GRID_Y)*GRID_Y)});render(); });
+addSlot(120,64); addSlot(240,128); addSlot(360,64); say('牌阵已就绪，拖动牌位开始布置');
 </script>
 </body>
 </html>
