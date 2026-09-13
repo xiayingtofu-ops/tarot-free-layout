@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>自由牌阵 · 78 张韦特塔罗</title>
   <style>
-    :root { color-scheme: dark; --ink:#f2f2f2; --paper:#050505; --line:#777; --accent:#fff; --slot-w:96px; --slot-h:120px; }
+    :root { color-scheme: dark; --ink:#f2f2f2; --paper:#050505; --line:#777; --accent:#fff; --slot-w:64px; --slot-h:120px; }
     * { box-sizing:border-box; }
     html, body { margin:0; min-height:100%; background:var(--paper); color:var(--ink); font-family:"Courier New","Microsoft YaHei",monospace; }
     body { padding:clamp(16px,3vw,32px); image-rendering:pixelated; }
@@ -30,15 +30,17 @@
     .slot .role { color:#888; font-size:9px; line-height:1.25; overflow-wrap:anywhere; }
     .slot .card { line-height:1.2; letter-spacing:.02em; font-size:11px; }
     .slot.filled { padding:0; border-style:solid; }
-    .slot.filled .content { display:grid; grid-template-columns:62% 38%; gap:0; width:100%; height:100%; }
-    .slot.filled .role { color:#aaa; font-size:8px; line-height:1.25; }
+    .slot.filled:hover { z-index:20; }
+    .slot.filled .content { display:block; width:100%; height:100%; }
+    .slot.filled .role { color:#aaa; font-size:9px; line-height:1.3; }
     .card-image { display:block; width:100%; height:100%; object-fit:cover; image-rendering:auto; }
-    .card-meta { display:flex; flex-direction:column; justify-content:center; gap:7px; min-width:0; padding:4px 3px; border-left:1px solid #555; background:#050505; overflow:hidden; }
-    .card-title { color:#fff; font-size:9px; line-height:1.3; overflow-wrap:anywhere; }
+    .card-meta { position:absolute; left:calc(100% + 5px); top:0; z-index:4; display:flex; flex-direction:column; gap:7px; width:108px; min-height:54px; padding:7px; border:1px solid #777; background:rgba(5,5,5,.94); box-shadow:3px 3px 0 #333; pointer-events:none; }
+    .slot.caption-left .card-meta { left:auto; right:calc(100% + 5px); }
+    .card-title { color:#fff; font-size:10px; line-height:1.35; overflow-wrap:anywhere; }
     .slot.empty .card { color:#666; font-size:11px; }
     #status { min-height:1.5em; margin-top:12px; font-size:14px; }
     footer { display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-top:18px; padding-top:14px; border-top:1px solid #444; font-size:12px; color:#777; }
-    @media (max-width:600px) { :root{--slot-w:80px;--slot-h:96px} body{padding:12px} .actions{width:100%} .actions button{flex:1} .presets select{min-width:0;flex:1} #board{height:72vh;margin-top:14px} .slot .role{font-size:7px}.slot .card{font-size:9px}.card-title{font-size:8px}.card-meta{gap:4px;padding:3px 2px} }
+    @media (max-width:600px) { :root{--slot-w:56px;--slot-h:96px} body{padding:12px} .actions{width:100%} .actions button{flex:1} .presets select{min-width:0;flex:1} #board{height:72vh;margin-top:14px} .slot .role{font-size:8px}.slot .card{font-size:9px}.card-title{font-size:9px}.card-meta{width:96px;gap:4px;padding:5px} }
   </style>
 </head>
 <body>
@@ -80,7 +82,7 @@ const majorFileNames={魔术师:'魔法师',女祭司:'女教皇',女皇:'女皇
 const board=document.querySelector('#board'), statusEl=document.querySelector('#status');
 let slots=[], nextId=1, drag=null;
 const SAVE_KEY='tarot-latest-layout-v1';
-function grid(){ return innerWidth<=600?{x:80,y:96}:{x:96,y:120}; }
+function grid(){ return innerWidth<=600?{x:56,y:96}:{x:64,y:120}; }
 const presets={
   single:{name:'单张牌阵',items:[[0,0,'当前核心']]},
   timeline:{name:'三张时间线',items:[[0,0,'过去'],[1,0,'现在'],[2,0,'未来']]},
@@ -116,7 +118,8 @@ function render(){
   board.innerHTML='';
   slots.forEach((slot,index)=>{
     const el=document.createElement('div');
-    el.className='slot '+(slot.card?'filled':'empty'); el.dataset.id=slot.id;
+    const g=grid(), captionLeft=slot.card&&slot.x+g.x+118>board.clientWidth;
+    el.className='slot '+(slot.card?'filled':'empty')+(captionLeft?' caption-left':''); el.dataset.id=slot.id;
     el.style.left=slot.x+'px'; el.style.top=slot.y+'px';
     const cardContent=slot.card?`<img class="card-image" src="${cardImagePath(slot.card)}" alt="${slot.card}"><span class="card-meta"><small class="role" title="${slot.role}">${slot.role||'自定义牌位'}</small><span class="card-title">${slot.card}</span></span>`:`<small class="role" title="${slot.role}">${slot.role}</small><span class="card">待抽</span>`;
     el.innerHTML=`<span class="number">${index+1}</span><button class="remove" title="删除牌位" aria-label="删除牌位">×</button><span class="content">${cardContent}</span>`;
