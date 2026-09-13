@@ -43,6 +43,7 @@
       <button id="add">＋ 牌位</button>
       <button id="draw" class="primary">抽牌</button>
       <button id="copy">复制结果</button>
+      <button id="save">保存牌阵</button>
       <button id="reset">重新开始</button>
     </div>
     <div class="presets">
@@ -55,6 +56,7 @@
         <option value="relationship5">关系五张阵 · 5张</option>
         <option value="celtic10">凯尔特十字 · 10张</option>
         <option value="decision7">七张决策阵 · 7张</option>
+        <option value="saved" hidden>我保存的牌阵</option>
       </select>
       <button id="applyPreset">套用牌阵</button>
     </div>
@@ -70,6 +72,7 @@ const ranks=['一','二','三','四','五','六','七','八','九','十','侍从
 const deck=[...major,...suits.flatMap(s=>ranks.map(r=>s+r))];
 const board=document.querySelector('#board'), statusEl=document.querySelector('#status');
 let slots=[], nextId=1, drag=null;
+const SAVE_KEY='tarot-latest-layout-v1';
 function grid(){ return innerWidth<=600?{x:56,y:96}:{x:64,y:120}; }
 const presets={
   single:{name:'单张牌阵',items:[[0,0,'当前核心']]},
@@ -118,13 +121,28 @@ function moveDrag(e){
   drag.el.style.left=drag.slot.x+'px'; drag.el.style.top=drag.slot.y+'px';
 }
 function endDrag(){ if(!drag)return; drag.el.classList.remove('dragging'); drag.el.removeEventListener('pointermove',moveDrag); drag=null; say('牌位已吸附到网格'); }
+function readSaved(){
+  try{return JSON.parse(localStorage.getItem(SAVE_KEY));}catch{return null;}
+}
+function showSavedOption(show=true){ document.querySelector('#preset option[value="saved"]').hidden=!show; }
+function saveLayout(){
+  if(!slots.length){say('请先布置牌阵');return;}
+  const g=grid(), raw=slots.map(s=>[Math.round(s.x/g.x),Math.round(s.y/g.y),s.role||'自定义牌位']);
+  const minCol=Math.min(...raw.map(i=>i[0])), minRow=Math.min(...raw.map(i=>i[1]));
+  const data={name:'我保存的牌阵',items:raw.map(([col,row,role])=>[col-minCol,row-minRow,role])};
+  try{
+    localStorage.setItem(SAVE_KEY,JSON.stringify(data));
+    showSavedOption(); document.querySelector('#preset').value='saved';
+    say(`已保存最新牌阵（${slots.length} 张）`);
+  }catch{ say('当前浏览器无法保存牌阵'); }
+}
 function applyPreset(key){
-  const preset=presets[key]; if(!preset)return;
+  const preset=key==='saved'?readSaved():presets[key]; if(!preset)return;
   const items=innerWidth<=600&&preset.mobile?preset.mobile:preset.items, g=grid();
   const maxCol=Math.max(...items.map(i=>i[0])), maxRow=Math.max(...items.map(i=>i[1]));
   const boardCols=Math.max(1,Math.floor(board.clientWidth/g.x)), boardRows=Math.max(1,Math.floor(board.clientHeight/g.y));
   const offsetCol=Math.max(0,Math.floor((boardCols-(maxCol+1))/2)), offsetRow=Math.max(0,Math.floor((boardRows-(maxRow+1))/2));
-  nextId=1; slots=items.map(([col,row,role])=>({id:nextId++,x:(col+offsetCol)*g.x,y:(row+offsetRow)*g.y,card:null,role}));
+  nextId=1; slots=items.map(([col,row,role])=>({id:nextId++,x:clamp((col+offsetCol)*g.x,0,Math.floor((board.clientWidth-g.x)/g.x)*g.x),y:clamp((row+offsetRow)*g.y,0,Math.floor((board.clientHeight-g.y)/g.y)*g.y),card:null,role}));
   render(); say(`已套用：${preset.name}`);
 }
 function drawCard(){
@@ -151,12 +169,14 @@ async function copyResult(){
 document.querySelector('#add').onclick=()=>addSlot();
 document.querySelector('#draw').onclick=drawCard;
 document.querySelector('#copy').onclick=copyResult;
+document.querySelector('#save').onclick=saveLayout;
 document.querySelector('#applyPreset').onclick=()=>applyPreset(document.querySelector('#preset').value);
 document.querySelector('#preset').onchange=e=>applyPreset(e.target.value);
 document.querySelector('#reset').onclick=()=>{ if(confirm('清空当前牌阵和抽牌结果？')){slots=[];nextId=1;render();say('已重新开始');} };
 board.addEventListener('dblclick',e=>{ if(e.target===board){ const r=board.getBoundingClientRect(),g=grid(); addSlot(e.clientX-r.left-g.x/2,e.clientY-r.top-g.y/2); } });
 window.addEventListener('resize',()=>{ const g=grid(); slots.forEach(s=>{s.x=clamp(s.x,0,Math.floor((board.clientWidth-g.x)/g.x)*g.x);s.y=clamp(s.y,0,Math.floor((board.clientHeight-g.y)/g.y)*g.y)});render(); });
-applyPreset('timeline');
+if(readSaved()){showSavedOption();document.querySelector('#preset').value='saved';applyPreset('saved');}
+else applyPreset('timeline');
 </script>
 </body>
 </html>
