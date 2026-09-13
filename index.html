@@ -23,12 +23,16 @@
     #board::before { content:"[ DRAG TO ARRANGE ]"; position:absolute; inset:50% auto auto 50%; transform:translate(-50%,-50%); width:90%; text-align:center; letter-spacing:.12em; color:#292929; pointer-events:none; }
     .slot { position:absolute; width:var(--slot-w); height:var(--slot-h); border:2px dashed var(--line); display:flex; align-items:center; justify-content:center; padding:18px 6px 10px; text-align:center; cursor:grab; user-select:none; touch-action:none; background:#050505; transition:none; }
     .slot.dragging { cursor:grabbing; border-style:solid; border-color:var(--accent); box-shadow:4px 4px 0 #555; z-index:10; }
-    .slot .number { position:absolute; top:4px; left:5px; font:9px/1 inherit; color:#777; }
-    .slot .remove { position:absolute; top:2px; right:3px; border:0; box-shadow:none; padding:2px 3px; color:#777; background:transparent; font:14px/1 inherit; }
+    .slot .number { position:absolute; top:4px; left:5px; z-index:3; padding:2px; font:9px/1 inherit; color:#fff; background:rgba(0,0,0,.75); }
+    .slot .remove { position:absolute; top:2px; right:3px; z-index:3; border:0; box-shadow:none; padding:2px 3px; color:#fff; background:rgba(0,0,0,.75); font:14px/1 inherit; }
     .slot .remove:hover { color:#fff; background:transparent; transform:none; }
     .slot .content { display:flex; flex-direction:column; gap:3px; min-width:0; }
     .slot .role { color:#888; font-size:9px; line-height:1.25; overflow-wrap:anywhere; }
     .slot .card { line-height:1.2; letter-spacing:.02em; font-size:11px; }
+    .slot.filled { padding:0; border-style:solid; }
+    .slot.filled .content { width:100%; height:100%; }
+    .slot.filled .role { position:absolute; left:2px; right:2px; bottom:2px; z-index:2; padding:2px; color:#fff; background:rgba(0,0,0,.78); }
+    .card-image { display:block; width:100%; height:100%; object-fit:cover; image-rendering:auto; }
     .slot.empty .card { color:#666; font-size:11px; }
     #status { min-height:1.5em; margin-top:12px; font-size:14px; }
     footer { display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-top:18px; padding-top:14px; border-top:1px solid #444; font-size:12px; color:#777; }
@@ -70,6 +74,7 @@ const major=['愚人','魔术师','女祭司','女皇','皇帝','教皇','恋人
 const suits=['权杖','圣杯','宝剑','星币'];
 const ranks=['一','二','三','四','五','六','七','八','九','十','侍从','骑士','王后','国王'];
 const deck=[...major,...suits.flatMap(s=>ranks.map(r=>s+r))];
+const majorFileNames={魔术师:'魔法师',女祭司:'女教皇',女皇:'女皇后'};
 const board=document.querySelector('#board'), statusEl=document.querySelector('#status');
 let slots=[], nextId=1, drag=null;
 const SAVE_KEY='tarot-latest-layout-v1';
@@ -88,6 +93,16 @@ const presets={
 function say(text){ statusEl.textContent=text; }
 function clamp(n,min,max){ return Math.max(min,Math.min(max,n)); }
 function snap(n,grid){ return Math.round(n/grid)*grid; }
+function cardImagePath(card){
+  const [name,orientation]=card.split(' · ');
+  let file;
+  if(major.includes(name)) file=`塔罗牌-${majorFileNames[name]||name}${orientation}.jpg`;
+  else{
+    const minorName=name.replace(/一$/,'首牌').replace('王后','皇后');
+    file=`${minorName}${orientation==='逆位'?'逆位':''}.jpg`;
+  }
+  return `assets/cards/${encodeURIComponent(file)}`;
+}
 function addSlot(x,y){
   const id=nextId++, w=board.clientWidth, h=board.clientHeight, g=grid();
   const slot={id,x:x ?? (slots.length%7)*g.x,y:y ?? Math.floor(slots.length/7)*g.y,card:null,role:''};
@@ -101,7 +116,8 @@ function render(){
     const el=document.createElement('div');
     el.className='slot '+(slot.card?'filled':'empty'); el.dataset.id=slot.id;
     el.style.left=slot.x+'px'; el.style.top=slot.y+'px';
-    el.innerHTML=`<span class="number">${index+1}</span><button class="remove" title="删除牌位" aria-label="删除牌位">×</button><span class="content"><small class="role" title="${slot.role}">${slot.role}</small><span class="card">${slot.card ?? '待抽'}</span></span>`;
+    const cardContent=slot.card?`<img class="card-image" src="${cardImagePath(slot.card)}" alt="${slot.card}">`:`<span class="card">待抽</span>`;
+    el.innerHTML=`<span class="number">${index+1}</span><button class="remove" title="删除牌位" aria-label="删除牌位">×</button><span class="content"><small class="role" title="${slot.role}">${slot.role}</small>${cardContent}</span>`;
     el.querySelector('.remove').addEventListener('click',e=>{e.stopPropagation(); slots=slots.filter(s=>s.id!==slot.id); render(); say('已删除牌位');});
     el.addEventListener('pointerdown',startDrag);
     board.appendChild(el);
